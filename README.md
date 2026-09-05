@@ -25,7 +25,7 @@ The overlay follows records written locally by Codex; it cannot show an inferenc
 - Size: 20%, 40%, 60%, 78%, or 100%.
 - Background: fully transparent, or 20–100% visibility without fading the text.
 - In fully transparent mode only the top text-height strip accepts the mouse and reveals the controls; the chart area lets clicks through to the app beneath it.
-- Hover over the left value for the formula and token breakdown. The visible label is `上下文增长` (context growth); the compact overlay currently uses Chinese labels.
+- The left value displays only a compact number and `tokens` (for example, `123K tokens`). Hover for the context-growth formula and token breakdown; explanatory controls and tooltips currently use Chinese.
 - Right-click or use the tray for pause, settings, and exit. Settings belong to the HUD only, in `%LOCALAPPDATA%\CodexMonitorHUD`.
 
 ## Build and verify

@@ -52,7 +52,9 @@ internal static class Program
         Check(line.Points.Count == 30, "chart retains latest thirty calls");
         Render(paused: true);
         Check(label.Text == "--" && label.ToolTip.ToString()!.Contains("已暂停"), "paused state is explicit");
-        Check(((TextBlock)view.Window.FindName("CacheChartTitle")).Text.Contains("上下文增长"), "growth metric is named explicitly");
+        var title = (TextBlock)view.Window.FindName("CacheChartTitle");
+        Check(title.Text == "1.2K tokens", "compact token value without a visible explanatory prefix");
+        Check(title.ToolTip.ToString()!.Contains("不是计费消耗"), "metric explanation remains available on hover");
         Console.WriteLine("HUD rendering checks: OK (thresholds, repeated refresh, idle, waiting, latest thirty, pause, growth label)");
     }
 }

@@ -220,7 +220,7 @@ internal sealed class MainHudView : IDisposable
         var now = DateTimeOffset.Now;
         var hasAttention = states.Any(state => state.AttentionUntil > now);
         ApplyAppearance(settings, overallStatus, hasAttention);
-        var contextText = $"上下文增长 {FormatTokenCount(launchContextTokens)}";
+        var contextText = $"{FormatTokenCount(launchContextTokens)} tokens";
         _launchTokenUsage.Text = contextText;
         _launchTokenUsage.ToolTip = $"HUD 打开后上下文正增长 {launchContextTokens:N0} tokens（主/子 Agent 与同时打开项目）\n启动从零累计；上下文压缩不倒扣；关闭后清零。此数值不是计费消耗。\n当前上下文合计 {currentContextTokens:N0}\nOpenAI/Codex 周额度已用 {(weeklyUsedPercent.HasValue ? $"{weeklyUsedPercent.Value:0.#}%" : "--")} · 5小时已用 {(fiveHourUsedPercent.HasValue ? $"{fiveHourUsedPercent.Value:0.#}%" : "--")}\nHUD 打开后原始 tokens {launchTotalTokens:N0}\n输入 {launchInputTokens:N0} · 缓存 {launchCachedTokens:N0} · 输出 {launchOutputTokens:N0}";
         ApplyTransparentLayout(settings, contextText);

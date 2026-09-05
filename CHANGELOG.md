@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.1
+
+- Restore the compact left display (`123K tokens`), keeping the context-growth explanation in the tooltip. No counting or cache-hit algorithm changes.
+
 ## 3.4.0
 
 - Label launch-scoped context growth explicitly and explain that it is not billed consumption.
