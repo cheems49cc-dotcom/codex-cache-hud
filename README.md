@@ -6,6 +6,10 @@ A small, local-only Windows overlay for Codex cache-hit activity. Modified from 
 
 ## Cache dips, at a glance
 
+![Synthetic HUD demo: cache-hit colors, top-strip controls, click-through illustration, and idle status](docs/media/cache-hud-demo.gif)
+
+*8-second illustrated demo made with Remotion, using synthetic data only—not a desktop recording or billing report. [MP4 version](docs/media/cache-hud-demo.mp4).*
+
 For Windows Codex users who want to keep working while watching cache-hit changes—not keep another dashboard open. Place a small transparent curve near your input area: the chart lets clicks through, and controls appear when you hover over its top strip.
 
 - **One curve, not a wall of metrics:** the latest 30 observed main/subagent calls, with a latest-call percentage rather than a lifetime average.
