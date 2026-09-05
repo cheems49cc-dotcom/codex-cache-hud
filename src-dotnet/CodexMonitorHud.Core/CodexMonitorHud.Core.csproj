@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CodexMonitorHud.Core</AssemblyName>
+    <RootNamespace>CodexMonitorHud.Core</RootNamespace>
+    <Description>Platform-neutral Codex Monitor HUD state, parsing, and configuration core.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="CodexMonitorHud.App.Tests" />
+  </ItemGroup>
+</Project>
