@@ -2,11 +2,23 @@
 
 A small, local-only Windows overlay for Codex cache-hit activity. Modified from [LH-03/codex-monitor-hud](https://github.com/LH-03/codex-monitor-hud), upstream commit `ace7a89bdb2692eec4f974ef8323865c22a4e68c` (v3.1.0), under the MIT license. This community tool is not affiliated with or endorsed by OpenAI.
 
-[中文说明](README.zh-CN.md) · [Privacy](PRIVACY.md) · [License](LICENSE)
+[Download for Windows](https://github.com/cheems49cc-dotcom/codex-cache-hud/releases/latest) · [中文说明](README.zh-CN.md) · [Report a bug](https://github.com/cheems49cc-dotcom/codex-cache-hud/issues) · [Privacy](PRIVACY.md) · [License](LICENSE)
+
+## Cache dips, at a glance
+
+For Windows Codex users who want to keep working while watching cache-hit changes—not keep another dashboard open. Place a small transparent curve near your input area: the chart lets clicks through, and controls appear when you hover over its top strip.
+
+- **One curve, not a wall of metrics:** the latest 30 observed main/subagent calls, with a latest-call percentage rather than a lifetime average.
+- **Small enough to stay out of the way:** 20% and 40% size presets, transparent background, and color thresholds that make cache dips visible.
+- **Local-only:** no API key, account sign-in, telemetry, or Codex configuration changes.
+
+Prefer detailed per-task lists and separate task bubbles? The [upstream Codex Monitor HUD](https://github.com/LH-03/codex-monitor-hud) may fit better. This derivative focuses on the single-curve workflow; it is not a billing tool or a way to increase your cache hit rate. Controls and tooltips currently use Chinese; English documentation is included.
+
+If this fits your workflow, a **GitHub Star** helps others discover it. Tried it? Share what worked—or a reproducible bug—in [Issues](https://github.com/cheems49cc-dotcom/codex-cache-hud/issues). Please do not attach raw session logs, credentials, or private screenshots.
 
 ## Download and run
 
-Download the Windows x64 ZIP from [Releases](../../releases), extract the whole folder, and open `CodexCacheHUD.exe`. Keep the files together. Windows 10/11 x64 is supported; the self-contained build does not need a separate .NET runtime. A local Codex session directory is required. The binary is currently unsigned.
+Download the Windows x64 ZIP from [the latest release](https://github.com/cheems49cc-dotcom/codex-cache-hud/releases/latest), extract the whole folder, and open `CodexCacheHUD.exe`. Keep the files together. Windows 10/11 x64 is supported; the self-contained build does not need a separate .NET runtime. A local Codex session directory is required. The binary is currently unsigned.
 
 No API key, account sign-in, installer, administrator access, startup task, or Codex configuration change is required. Exit from the system tray. Do not disable antivirus protections if a download is flagged; report the detection name and release hash instead.
 

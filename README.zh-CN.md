@@ -2,9 +2,23 @@
 
 Windows 本地缓存命中悬浮窗，基于 [Codex Monitor HUD](https://github.com/LH-03/codex-monitor-hud) v3.1.0 / `ace7a89bdb2692eec4f974ef8323865c22a4e68c` 改造，保留 MIT 许可证和原作者版权声明。本工具为社区项目，不代表 OpenAI 官方。
 
+[下载 Windows 版](https://github.com/cheems49cc-dotcom/codex-cache-hud/releases/latest) · [English](README.md) · [反馈问题](https://github.com/cheems49cc-dotcom/codex-cache-hud/issues) · [隐私说明](PRIVACY.md)
+
+## 一眼看到缓存波动，不再多开一个面板
+
+适合这样的你：在 Windows 上使用 Codex，希望边工作边看每次调用的缓存命中变化，不想让复杂面板遮住输入框。把透明小曲线放在屏幕角落或输入区附近，曲线区域点击穿透，鼠标移到顶部窄条才显示设置。
+
+- **少而直观：** 合并已发现主、子 Agent 最近 30 次调用；右侧显示末次调用命中率，不用累计平均掩盖变化。
+- **少遮挡：** 支持 20%、40% 小尺寸和全透明背景，缓存下降通过颜色分档提示。
+- **本地使用：** 不需要 API key 或登录，不上传遥测，不修改 Codex 配置。
+
+如果需要逐任务详细列表、多个独立任务气泡，[原版 Codex Monitor HUD](https://github.com/LH-03/codex-monitor-hud) 可能更适合你。本版专注单曲线体验，不是计费工具，也不会提高缓存命中率。当前控件与悬停提示为中文，附有英文文档。
+
+如果它正好适合你的工作方式，欢迎点一个 **Star**，让更多有同样需求的人发现它。实际使用反馈和可复现的问题同样欢迎提交到 [Issues](https://github.com/cheems49cc-dotcom/codex-cache-hud/issues)；请不要上传原始会话日志、凭据或含隐私的截图。
+
 ## 使用
 
-在 [Releases](../../releases) 下载 Windows x64 ZIP，完整解压后双击 `CodexCacheHUD.exe`；也可以为它创建桌面快捷方式。支持 Windows 10/11 x64，内含运行时，无需单独安装 .NET。需本机已经存在 Codex 会话数据。
+在 [最新版本](https://github.com/cheems49cc-dotcom/codex-cache-hud/releases/latest) 下载 Windows x64 ZIP，完整解压后双击 `CodexCacheHUD.exe`；也可以为它创建桌面快捷方式。支持 Windows 10/11 x64，内含运行时，无需单独安装 .NET。需本机已经存在 Codex 会话数据。
 
 无需 API key、登录账号、管理员权限或安装服务；不修改 Codex 配置及更新机制。程序目前没有代码签名；如果安全软件报警，请保留保护并报告版本、检测名称与文件哈希。
 
