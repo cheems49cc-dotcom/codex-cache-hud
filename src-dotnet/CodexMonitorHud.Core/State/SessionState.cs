@@ -12,6 +12,7 @@ public sealed class SessionState
     public string Model { get; set; } = string.Empty;
     public string Workspace { get; set; } = string.Empty;
     public HudSnapshot? Snapshot { get; set; }
+    public TurnOutputRate OutputRate { get; internal set; } = new();
     /// <summary>Newest fifty real calls, in chronological order.</summary>
     public IReadOnlyList<CallUsageSample> CallHistory => _callHistory;
     public AlertState AlertState { get; set; } = AlertState.OK;

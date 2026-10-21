@@ -598,6 +598,7 @@ public sealed class SessionMonitorEngine
             }
 
             state.LastWriteTimeUtc = file.LastWriteTimeUtc;
+            if (file.Length < state.Reader.Offset) state.OutputRate = new TurnOutputRate();
             var lines = state.Reader.ReadAppended(state.Path, maximumBytes);
             if (state.Reader.HasUnreadData) _backlogPaths.Add(state.Path);
             else _backlogPaths.Remove(state.Path);
@@ -643,6 +644,7 @@ public sealed class SessionMonitorEngine
 
     private bool ApplyRecord(SessionState state, HudRecord item, DateTimeOffset now)
     {
+        state.OutputRate.Observe(item);
         switch (item.Kind)
         {
             case HudRecordKind.Context:
@@ -914,7 +916,11 @@ public sealed class SessionMonitorEngine
 
     private void SeedCallHistory(SessionState state, DateTimeOffset now)
     {
-        foreach (var item in BoundedTailReader.ReadRecentUsageRecords(state.Path, maximumRecords: 50))
+        var records = BoundedTailReader.ReadLines(state.Path)
+            .Select(HudRecordParser.Parse).OfType<HudRecord>().ToArray();
+        state.OutputRate = new TurnOutputRate();
+        foreach (var item in records) state.OutputRate.Observe(item);
+        foreach (var item in records.Where(static item => item.Kind == HudRecordKind.Usage).TakeLast(100))
         {
             ApplyAllowance(state, item);
             _ = ApplyUsageRecord(state, item, now, raiseContextAlert: false);

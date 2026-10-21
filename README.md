@@ -12,7 +12,7 @@ A small, local-only Windows overlay for Codex cache-hit activity. Modified from 
 
 For Windows Codex users who want to keep working while watching cache-hit changes—not keep another dashboard open. Place a small transparent curve near your input area: the chart lets clicks through, and controls appear when you hover over its top strip.
 
-- **One curve, not a wall of metrics:** the latest 30 observed main/subagent calls, with a latest-call percentage rather than a lifetime average.
+- **One curve, not a wall of metrics:** the latest 30 observed main-agent calls, excluding subagents, with a latest-call percentage rather than a lifetime average.
 - **Small enough to stay out of the way:** 20% and 40% size presets, transparent background, and color thresholds that make cache dips visible.
 - **Local-only:** no API key, account sign-in, telemetry, or Codex configuration changes.
 
@@ -29,9 +29,10 @@ No API key, account sign-in, installer, administrator access, startup task, or C
 ## What the numbers mean
 
 - **Left — context growth since launch:** each observed session starts with a baseline; positive changes in its latest `last_token_usage.total_tokens` are added. Newly created sessions start from zero. Compaction does not subtract prior growth. Closing and reopening the HUD resets this in-memory counter. This measures observed context growth, **not billed tokens, API cost, or subscription usage**.
-- **Right — latest call cache hit:** `cached_input_tokens / input_tokens` for the last chart point. No lifetime averaging.
-- **Curve:** the most recent 30 real calls across discovered main and subagent sessions. Points are equally spaced by call order, not elapsed time. No synthetic calls are added to make the chart move.
-- **Idle, paused, or waiting for a new turn's first result:** the percentage reads `--`; history remains dimmed. Hover over the percentage to see status and the latest call time.
+- **Right — latest main-agent call cache hit:** `cached_input_tokens / input_tokens` for the last chart point. No lifetime averaging; subagent calls are excluded.
+- **Top — average output rate (for example, `42.0 tok/s`):** reported output tokens divided by elapsed wall-clock seconds for the most recently started active main-agent turn. Includes reasoning tokens, tool execution, and waiting; excludes input/cached tokens. This is not live model generation speed. Concurrent chats and subagents are not added together; hover to identify the chat, output count, and elapsed time. Refreshes roughly every 1–2 seconds, with usage arriving when calls are recorded. Completion/interruption freezes the result; idle retains the latest turn. Pause, no usage yet, missing start records, or unreliable timing shows `--`. Startup recovery uses a bounded log tail and does not guess a rate when the full turn is unavailable.
+- **Curve:** the most recent 30 real calls across discovered main-agent sessions only. Points are equally spaced by call order, not elapsed time. No synthetic calls are added to make the chart move. Left-side context growth still includes both main and subagent sessions, unchanged.
+- **Idle, paused, or waiting for a new turn's first result:** the cache percentage reads `--`; history remains dimmed. Hover over the percentage to see status and the latest call time. Average output rate follows the retention rules above.
 - **Colors:** at least 98% green; 95–98% yellow; 90–95% red; below 90% dark red. The number and curve use the same latest-call color.
 
 The overlay follows records written locally by Codex; it cannot show an inference's final token counts before Codex emits them. Logs are not a billing ledger. Discovery is bounded (30-minute recent window by default); missing, locked, unsupported, or delayed local records can limit coverage. Quota percentages in the diagnostic tooltip are locally observed snapshots, not a live account query.
@@ -58,6 +59,6 @@ The Core checks use synthetic temporary sessions. The WPF checks exercise the re
 
 ## Attribution and scope
 
-The upstream project supplies the WPF/Core foundation. This derivative focuses on the single cache curve, transparent compact controls, launch-scoped growth, main/subagent call history, and lifecycle-aware status. Original copyright and permission notices remain in [LICENSE](LICENSE); palette references remain in [COLOR_ATTRIBUTION.md](COLOR_ATTRIBUTION.md). Legacy plugin/MCP installation scripts, screenshots, and private development history are not distributed in this repository.
+The upstream project supplies the WPF/Core foundation. This derivative focuses on the single main-agent cache curve, transparent compact controls, launch-scoped growth across main/subagent sessions, and lifecycle-aware status. Original copyright and permission notices remain in [LICENSE](LICENSE); palette references remain in [COLOR_ATTRIBUTION.md](COLOR_ATTRIBUTION.md). Legacy plugin/MCP installation scripts, screenshots, and private development history are not distributed in this repository.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and [SECURITY.md](SECURITY.md) for safe issue reporting.

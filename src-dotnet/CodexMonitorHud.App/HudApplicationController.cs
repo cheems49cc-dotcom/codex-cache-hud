@@ -45,6 +45,7 @@ internal sealed partial class HudApplicationController : IDisposable
     private DateTimeOffset _lastRuntimeReconciliation = DateTimeOffset.MinValue;
     private DateTimeOffset _lastLifecyclePoll = DateTimeOffset.MinValue;
     private DateTimeOffset _lastQuietPoll = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastOutputRateRefresh = DateTimeOffset.MinValue;
     private DateTimeOffset _lastNotificationReconciliation = DateTimeOffset.MinValue;
     private DateTimeOffset _managedGraceUntil = DateTimeOffset.MinValue;
     private DateTimeOffset _responsiveUntil = DateTimeOffset.MinValue;
@@ -108,7 +109,7 @@ internal sealed partial class HudApplicationController : IDisposable
 
     public void Start()
     {
-        _log.Write($"Codex Cache HUD v3.4.1 starting. config={_paths.ConfigPath}; profiles={string.Join(',', _profiles.Select(static profile => profile.Id))}; agentNotices={_settings.AgentNotifications.Enabled}/{_settings.AgentNotifications.Permission}");
+        _log.Write($"Codex Cache HUD v3.5.0 starting. config={_paths.ConfigPath}; profiles={string.Join(',', _profiles.Select(static profile => profile.Id))}; agentNotices={_settings.AgentNotifications.Enabled}/{_settings.AgentNotifications.Permission}");
         var now = DateTimeOffset.Now;
         _engine.RefreshActiveSessions(now);
         _engine.Poll(now);
@@ -371,6 +372,11 @@ internal sealed partial class HudApplicationController : IDisposable
             _responsiveUntil = now.AddSeconds(2);
             ApplyPricing();
             Render(force: true);
+        }
+        if (now - _lastOutputRateRefresh >= TimeSpan.FromSeconds(1))
+        {
+            _lastOutputRateRefresh = now;
+            _view.RefreshOutputRate(_engine.GetVisibleStates(now).Concat(_engine.GetUsageStates()).Distinct().ToArray(), _paused, now);
         }
         _timer.Interval = now < _responsiveUntil
             ? TimeSpan.FromMilliseconds(250)

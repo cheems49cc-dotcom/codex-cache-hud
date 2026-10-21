@@ -37,6 +37,7 @@ internal sealed class MainHudView : IDisposable
     private readonly TextBlock _cacheChartStatus;
     private readonly TextBlock _cacheChartEnd;
     private readonly TextBlock _launchTokenUsage;
+    private readonly TextBlock _turnOutputRate;
     private readonly Border _cacheChartFrame;
     private readonly RowDefinition _cacheChartFooterRow;
     private readonly Border _cacheChartTopLine;
@@ -118,6 +119,7 @@ internal sealed class MainHudView : IDisposable
         _cacheChartStatus = XamlLoader.Require<TextBlock>(Window, "CacheChartStatus");
         _cacheChartEnd = XamlLoader.Require<TextBlock>(Window, "CacheChartEnd");
         _launchTokenUsage = XamlLoader.Require<TextBlock>(Window, "LaunchTokenUsage");
+        _turnOutputRate = XamlLoader.Require<TextBlock>(Window, "TurnOutputRate");
         _cacheChartFrame = XamlLoader.Require<Border>(Window, "CacheChartFrame");
         _cacheChartFooterRow = XamlLoader.Require<RowDefinition>(Window, "CacheChartFooterRow");
         _cacheChartTopLine = XamlLoader.Require<Border>(Window, "CacheChartTopLine");
@@ -225,6 +227,7 @@ internal sealed class MainHudView : IDisposable
         _launchTokenUsage.ToolTip = $"HUD 打开后上下文正增长 {launchContextTokens:N0} tokens（主/子 Agent 与同时打开项目）\n启动从零累计；上下文压缩不倒扣；关闭后清零。此数值不是计费消耗。\n当前上下文合计 {currentContextTokens:N0}\nOpenAI/Codex 周额度已用 {(weeklyUsedPercent.HasValue ? $"{weeklyUsedPercent.Value:0.#}%" : "--")} · 5小时已用 {(fiveHourUsedPercent.HasValue ? $"{fiveHourUsedPercent.Value:0.#}%" : "--")}\nHUD 打开后原始 tokens {launchTotalTokens:N0}\n输入 {launchInputTokens:N0} · 缓存 {launchCachedTokens:N0} · 输出 {launchOutputTokens:N0}";
         ApplyTransparentLayout(settings, contextText);
         RenderCacheChart(settings, usageStates, paused);
+        RefreshOutputRate(states.Concat(usageStates).Distinct().ToArray(), paused, now);
         _taskListToggle.Visibility = Visibility.Collapsed;
         _taskListDivider.Visibility = Visibility.Collapsed;
         _taskListScroller.Visibility = Visibility.Collapsed;
@@ -235,11 +238,33 @@ internal sealed class MainHudView : IDisposable
         UpdatePosition(settings);
     }
 
+    internal void RefreshOutputRate(IReadOnlyList<SessionState> states, bool paused, DateTimeOffset now)
+    {
+        var state = states.Where(static item => !item.IsInternalSession)
+            .OrderByDescending(static item => item.TurnInProgress)
+            .ThenByDescending(static item => item.TurnStartedAt)
+            .FirstOrDefault();
+        var rate = state?.OutputRate;
+        var value = paused || state?.IsReadBlocked == true || state?.NeedsSnapshotHydration == true
+            ? null : rate?.AverageAt(now);
+        var finished = rate?.EndedAt.HasValue == true;
+        _turnOutputRate.Text = $"{(value.HasValue ? value.Value.ToString("0.0") : "--")} tok/s";
+        _turnOutputRate.Opacity = value.HasValue && !finished ? 1 : 0.65;
+        var status = paused ? "已暂停" : state is null ? "空闲" :
+            value.HasValue ? finished ? rate!.Aborted ? "本轮已中止（仅已记录输出）" : "本轮已结束" : "本轮进行中" :
+            "等待本轮完整计时和调用数据";
+        var title = state is null ? "--" : !string.IsNullOrWhiteSpace(state.ConversationLabel)
+            ? state.ConversationLabel : !string.IsNullOrWhiteSpace(state.Workspace) ? state.Workspace : $"任务 {state.Number}";
+        _turnOutputRate.ToolTip = $"{status} · {title}\n本轮平均 = 本轮已记录输出 tokens / 本轮经过秒数。\n包含思考 tokens、工具执行和等待时间；不含输入和缓存 tokens，不是实时生成速度。\n只显示最近开始的活跃主 Agent 一轮；空闲时保留最近一轮，不合并多个聊天或子 Agent。\n日志在调用完成后更新；记录不完整时显示 --。"
+            + (value.HasValue ? $"\n输出 {rate!.OutputTokens:N0} tokens · 用时 {((rate.EndedAt ?? now) - rate.StartedAt).TotalSeconds:0.0} 秒" : string.Empty);
+    }
+
     private void RenderCacheChart(
         HudSettings settings,
         IReadOnlyList<SessionState> states,
         bool paused)
     {
+        states = states.Where(static state => !state.IsInternalSession).ToArray();
         var samples = states
             .SelectMany(static state => state.CallHistory)
             .OrderBy(static sample => sample.Timestamp)
@@ -251,7 +276,7 @@ internal sealed class MainHudView : IDisposable
         var status = paused ? "已暂停" : !hasActiveTurn ? "空闲" : hasCurrentResult ? "监控中" : "等待调用数据";
         var latestAt = samples.Length > 0 ? samples[^1].Timestamp : (DateTimeOffset?)null;
         _cacheChartLatest.ToolTip = latestAt.HasValue
-            ? $"{status} · 最近调用距今 {Math.Max(0, (DateTimeOffset.Now - latestAt.Value).TotalSeconds):0} 秒\n最后一次调用：{latestAt.Value.ToLocalTime():yyyy-MM-dd HH:mm:ss}\n命中率 = 该次缓存输入 / 该次全部输入；包含主/子 Agent。\n曲线每点代表一次调用，不是固定时间间隔。"
+            ? $"{status} · 最近调用距今 {Math.Max(0, (DateTimeOffset.Now - latestAt.Value).TotalSeconds):0} 秒\n最后一次调用：{latestAt.Value.ToLocalTime():yyyy-MM-dd HH:mm:ss}\n命中率 = 该次缓存输入 / 该次全部输入；仅主 Agent，不包含子 Agent。\n曲线每点代表一次调用，不是固定时间间隔。"
             : $"{status} · 尚无调用数据";
 
         if (samples.Length == 0)
@@ -262,7 +287,7 @@ internal sealed class MainHudView : IDisposable
             _cacheChartStart.Text = "--:--:--";
             _cacheChartEnd.Text = "--:--:--";
             _cacheChartStatus.Text = status;
-            _cacheChartCaption.Text = "最近 30 次调用 · 实时";
+            _cacheChartCaption.Text = "主 Agent 最近 30 次调用 · 实时";
             return;
         }
 
@@ -295,7 +320,7 @@ internal sealed class MainHudView : IDisposable
         _cacheChartStart.Text = samples[0].Timestamp.ToLocalTime().ToString("HH:mm:ss");
         _cacheChartEnd.Text = latest.Timestamp.ToLocalTime().ToString("HH:mm:ss");
         _cacheChartStatus.Text = $"{status} · {samples.Length}/30";
-        _cacheChartCaption.Text = "最近 30 次调用 · 缓存命中率";
+        _cacheChartCaption.Text = "主 Agent 最近 30 次调用 · 缓存命中率";
     }
 
     private void ApplyTransparentLayout(HudSettings settings, string contextText)
@@ -314,6 +339,7 @@ internal sealed class MainHudView : IDisposable
             ? _brushes.Create("#FF34C759", "#FF34C759", BrushRole.Status, settings, "listening", false)
             : _brushes.Create(settings.Foreground, "#FF111827", BrushRole.Primary, settings, "listening", false);
         _cacheChartTitle.ToolTip = enabled ? _launchTokenUsage.ToolTip : null;
+        _turnOutputRate.Foreground = _cacheChartTitle.Foreground;
         _cacheChartCaption.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
         _launchTokenUsage.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
         _cacheChartStart.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;

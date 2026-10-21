@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.5.0
+
+- Add a top-strip average output rate for the most recently started active main-agent turn, including reasoning, tool execution, and waiting time. This is wall-clock throughput, not live model generation speed.
+- Keep the visible rate label compact (`42.0 tok/s`); retain the average-rate explanation in the tooltip.
+- Refresh elapsed time without extra log scans. Freeze completed/interrupted averages and show unavailable data or paused monitoring as `--`.
+- Recover the current turn from the bounded log tail independently of the fifty-call history; ignore duplicate usage and compaction estimates. Preserve the existing cache curve, launch counter, and transparent click-through layout.
+
+## 3.4.2
+
+- Show only main-agent calls in the cache-hit curve and latest-call percentage; subagent activity does not keep the cache display active.
+- Retain the latest 30 main-agent calls. Launch-scoped tokens still include main and subagent sessions, unchanged.
+
 ## 3.4.1
 
 - Restore the compact left display (`123K tokens`), keeping the context-growth explanation in the tooltip. No counting or cache-hit algorithm changes.

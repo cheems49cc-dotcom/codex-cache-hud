@@ -56,7 +56,8 @@ public static class HudRecordParser
 
             if (eventType is "task_started" or "task_complete" or "turn_aborted")
             {
-                var timestamp = ParseTimestampOrNow(root);
+                var hasTimestamp = TryParseTimestamp(root, out var timestamp);
+                if (!hasTimestamp) timestamp = DateTimeOffset.Now;
                 var kind = eventType switch
                 {
                     "task_started" => HudRecordKind.Started,
@@ -70,6 +71,7 @@ public static class HudRecordParser
                 {
                     Kind = kind,
                     Timestamp = timestamp,
+                    TimestampIsEstimated = !hasTimestamp,
                     TurnId = GetString(payload, "turn_id")
                 };
             }
@@ -232,9 +234,6 @@ public static class HudRecordParser
             ? trimmed[(separator + 1)..]
             : trimmed;
     }
-
-    private static DateTimeOffset ParseTimestampOrNow(JsonElement root) =>
-        TryParseTimestamp(root, out var timestamp) ? timestamp : DateTimeOffset.Now;
 
     private static bool TryParseTimestamp(JsonElement root, out DateTimeOffset timestamp)
     {

@@ -113,6 +113,9 @@ internal static class Program
             .FirstOrDefault();
         var snapshot = state?.Snapshot;
         var latestCall = state?.CallHistory.LastOrDefault();
+        var rateState = visible.Concat(usageStates).Distinct().Where(static item => !item.IsInternalSession)
+            .OrderByDescending(static item => item.TurnInProgress).ThenByDescending(static item => item.TurnStartedAt)
+            .FirstOrDefault();
 
         Console.WriteLine(JsonSerializer.Serialize(new
         {
@@ -127,6 +130,13 @@ internal static class Program
             runtime_active_tasks = visible.Count(item => item.RuntimeActivityAt != DateTimeOffset.MinValue),
             history_count = state?.CallHistory.Count ?? 0,
             cache_alert = state?.AlertState.ToString() ?? string.Empty,
+            average_output_rate = rateState is null ? null : new
+            {
+                output_tokens = rateState.OutputRate.OutputTokens,
+                started_at = rateState.OutputRate.StartedAt,
+                ended_at = rateState.OutputRate.EndedAt,
+                tokens_per_second = rateState.OutputRate.AverageAt(DateTimeOffset.Now)
+            },
             latest_call = latestCall is null ? null : new
             {
                 timestamp = latestCall.Timestamp.ToString("O"),

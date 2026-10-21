@@ -14,6 +14,7 @@ var tests = new (string Name, Action Run)[]
 {
     ("record parsing", TestRecordParsing),
     ("call history and cache health", TestCallHistoryAndCacheHealth),
+    ("turn average output rate", TestTurnOutputRate),
     ("tokens since HUD launch", TestLaunchTokenCounter),
     ("JSON line splitting", TestLineSplitting),
     ("incremental title index", TestTitleIndex),
@@ -175,6 +176,92 @@ void TestCallHistoryAndCacheHealth()
         {
             new CallUsageSample { Input = 100, Cached = 0, Total = 100 }
         }), "short misses do not cause false cache alerts");
+    });
+}
+
+void TestTurnOutputRate()
+{
+    var start = DateTimeOffset.Parse("2026-10-20T12:00:00Z");
+    HudRecord Lifecycle(HudRecordKind kind, int seconds, string id = "turn-1") =>
+        new() { Kind = kind, Timestamp = start.AddSeconds(seconds), TurnId = id };
+    HudRecord Usage(int seconds, long output, long total) => new()
+    {
+        Kind = HudRecordKind.Usage, Timestamp = start.AddSeconds(seconds),
+        Output = output, Reasoning = 5, Input = 1_000, Cached = 800,
+        TaskInput = total * 100, TaskOutput = total, TaskTotal = total * 101
+    };
+    var rate = new TurnOutputRate();
+    rate.Observe(Usage(-1, 100, 100));
+    Equal<double?>(null, rate.AverageAt(start), "missing turn start is unknown, not zero");
+    rate.Observe(Lifecycle(HudRecordKind.Started, 0));
+    Equal<double?>(null, rate.AverageAt(start.AddSeconds(1)), "wait for first completed call");
+    rate.Observe(Usage(1, 100, 100));
+    Equal(0L, rate.OutputTokens, "repeated previous-turn usage is not new output");
+    rate.Observe(Usage(10, 100, 200));
+    rate.Observe(Usage(11, 100, 200));
+    Equal(100L, rate.OutputTokens, "duplicate notifications and reasoning are not added twice");
+    Equal(10d, rate.AverageAt(start.AddSeconds(10)), "uses output only, not input or cached tokens");
+    Equal(5d, rate.AverageAt(start.AddSeconds(20)), "wall-clock denominator advances during tools and waiting");
+    Equal<double?>(null, rate.AverageAt(start), "zero denominator is unavailable");
+    Equal<double?>(null, rate.AverageAt(start.AddSeconds(-1)), "backward clock is unavailable");
+    rate.Observe(Lifecycle(HudRecordKind.Completed, 20, "old-turn"));
+    Equal<DateTimeOffset?>(null, rate.EndedAt, "stale completion cannot freeze a newer turn");
+    rate.Observe(Usage(21, 0, 999) with { IsCompactionEstimate = true });
+    Equal(100L, rate.OutputTokens, "compaction estimates do not add output");
+    rate.Observe(Lifecycle(HudRecordKind.Completed, 25));
+    Equal(4d, rate.AverageAt(start.AddMinutes(2)), "completed average stays fixed");
+    rate.Observe(Lifecycle(HudRecordKind.Started, 30, "turn-2"));
+    rate.Observe(Usage(40, 50, 250));
+    rate.Observe(Lifecycle(HudRecordKind.Started, 30, "turn-2"));
+    Equal(50L, rate.OutputTokens, "duplicate start does not reset counted output");
+    rate.Observe(Lifecycle(HudRecordKind.Aborted, 50, "turn-2"));
+    Equal(2.5d, rate.AverageAt(start.AddMinutes(2)), "aborted turn freezes reported output only");
+    IsTrue(rate.Aborted, "aborted rate is labeled separately");
+    rate.Observe(Lifecycle(HudRecordKind.Started, 60, "bad-time") with { TimestampIsEstimated = true });
+    rate.Observe(Usage(70, 100, 350));
+    Equal<double?>(null, rate.AverageAt(start.AddSeconds(70)), "estimated lifecycle time cannot produce a speed");
+    var missingTimestamp = HudRecordParser.Parse("""{"type":"event_msg","payload":{"type":"task_started","turn_id":"missing-time"}}""");
+    IsTrue(missingTimestamp!.TimestampIsEstimated, "parser flags fallback time for rate calculation");
+    var replay = new TurnOutputRate();
+    replay.Observe(Lifecycle(HudRecordKind.Started, 0));
+    replay.Observe(Usage(10, 100, 100));
+    replay.Observe(Usage(20, 100, 200));
+    replay.Observe(Lifecycle(HudRecordKind.Started, 0));
+    replay.Observe(Usage(10, 100, 100));
+    replay.Observe(Usage(20, 100, 200));
+    Equal(200L, replay.OutputTokens, "replay after snapshot hydration does not double-count an active turn");
+
+    WithTemporaryDirectory(root =>
+    {
+        var path = Path.Combine(root, "rate.jsonl");
+        var lines = new List<string>
+        {
+            """{"type":"session_meta","payload":{"id":"rate","cwd":"C:\\Synthetic\\rate","source":"vscode","originator":"Codex Desktop"}}""",
+            """{"timestamp":"2026-10-20T12:00:00Z","type":"event_msg","payload":{"type":"task_started","turn_id":"long-turn"}}"""
+        };
+        lines.AddRange(Enumerable.Range(1, 75).Select(i =>
+            UsageLine(start.AddSeconds(i), 1_000, 800, 1_100, i * 1_000, i * 800, i * 1_100)));
+        File.WriteAllText(path, string.Join('\n', lines) + '\n', new UTF8Encoding(false));
+        var now = DateTimeOffset.UtcNow;
+        var engine = new SessionMonitorEngine(root, Path.Combine(root, "index.jsonl"),
+            new HudRuntimeOptions { ActiveWindowMinutes = 60 });
+        engine.RefreshActiveSessions(now);
+        var state = engine.States.Values.Single();
+        Equal(50, state.CallHistory.Count, "chart call history remains bounded");
+        Equal(7_500L, state.OutputRate.OutputTokens, "startup rate includes the whole observed turn, not only fifty calls");
+        Equal(100d, state.OutputRate.AverageAt(start.AddSeconds(75)), "mid-turn startup reconstructs rate");
+        File.AppendAllText(path, UsageLine(start.AddSeconds(76), 1_000, 800, 1_100, 76_000, 60_800, 83_600) + '\n',
+            new UTF8Encoding(false));
+        engine.Poll(now);
+        Equal(7_600L, state.OutputRate.OutputTokens, "incremental polling continues seeded rate once");
+        File.AppendAllText(path,
+            """{"timestamp":"2026-10-20T12:01:20Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"long-turn"}}""" + '\n',
+            new UTF8Encoding(false));
+        engine.Poll(now);
+        Equal(95d, state.OutputRate.AverageAt(start.AddHours(1)), "engine lifecycle freezes completed average");
+        File.WriteAllText(path, lines[0] + '\n' + lines[^1] + '\n', new UTF8Encoding(false));
+        engine.Poll(now);
+        Equal<double?>(null, state.OutputRate.AverageAt(now), "truncated history without a start never reuses old rate");
     });
 }
 

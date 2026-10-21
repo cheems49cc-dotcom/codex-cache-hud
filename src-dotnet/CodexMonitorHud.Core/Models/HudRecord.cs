@@ -15,6 +15,7 @@ public sealed record HudRecord
 {
     public required HudRecordKind Kind { get; init; }
     public DateTimeOffset Timestamp { get; init; }
+    public bool TimestampIsEstimated { get; init; }
     public string TurnId { get; init; } = string.Empty;
     public bool MatchesTurn(string activeTurnId) =>
         string.IsNullOrWhiteSpace(activeTurnId) || string.IsNullOrWhiteSpace(TurnId) || TurnId == activeTurnId;
